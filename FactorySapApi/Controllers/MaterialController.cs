@@ -175,5 +175,37 @@ namespace FactorySapApi.Controllers
                 Condition = reader["Condition"]
             });
         }
+            [HttpPost("insert")]
+            public async Task<IActionResult> InsertMaterial([FromBody] InsertMaterialRequest req)
+            {
+                string connStr = _config.GetConnectionString("NeonDb");
+
+                using var conn = new NpgsqlConnection(connStr);
+                await conn.OpenAsync();
+
+                var cmd = new NpgsqlCommand(@"
+        INSERT INTO material_transactions
+        (batch_no, material_code, material_name, description, weight, user_qty, sap_status)
+        VALUES
+        (@batch, @material, @name, @desc, @weight, @qty, 'PENDING')
+        RETURNING id;
+    ", conn);
+
+                cmd.Parameters.AddWithValue("@batch", req.BatchNo);
+                cmd.Parameters.AddWithValue("@material", req.MaterialCode);
+                cmd.Parameters.AddWithValue("@name", req.MaterialName);
+                cmd.Parameters.AddWithValue("@desc", req.Description);
+                cmd.Parameters.AddWithValue("@weight", req.Weight);
+                cmd.Parameters.AddWithValue("@qty", req.Quantity);
+
+                var id = await cmd.ExecuteScalarAsync();
+
+                return Ok(new
+                {
+                    Message = "Inserted Successfully",
+                    Id = id
+                });
+            }
+
+        }
     }
-}
